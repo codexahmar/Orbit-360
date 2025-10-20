@@ -30,9 +30,8 @@ class Helpers {
 
   // Format coordinate for display
   static String formatCoordinate(double value, {bool isLatitude = true}) {
-    final direction = isLatitude
-        ? (value >= 0 ? 'N' : 'S')
-        : (value >= 0 ? 'E' : 'W');
+    final direction =
+        isLatitude ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
     return '${value.abs().toStringAsFixed(4)}° $direction';
   }
 

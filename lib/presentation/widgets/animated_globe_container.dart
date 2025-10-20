@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_earth_globe/flutter_earth_globe.dart';
 import 'package:provider/provider.dart';
@@ -28,23 +29,15 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
     );
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutBack,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeIn,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
-    // ✅ Delay provider initialization until after the first build frame
+    // Animate only after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<GlobeProvider>(context, listen: false);
-      provider.initialize();
       _animationController.forward();
     });
   }
@@ -63,15 +56,13 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
     return Consumer<GlobeProvider>(
       builder: (context, provider, child) {
         if (!provider.isInitialized) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Animated Background Glow
+            // Animated glow
             AnimatedBuilder(
               animation: _animationController,
               builder: (context, child) {
@@ -94,7 +85,7 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
               },
             ),
 
-            // Orbit Ring
+            // Orbit ring
             AnimatedBuilder(
               animation: _animationController,
               builder: (context, child) {
@@ -123,15 +114,13 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
                 child: FlutterEarthGlobe(
                   controller: provider.controller,
                   radius: radius,
-                  onTap: (coordinates) =>
-                      provider.setClickCoordinates(coordinates),
-                  onHover: (coordinates) =>
-                      provider.setHoverCoordinates(coordinates),
+                  onTap: provider.setClickCoordinates,
+                  onHover: provider.setHoverCoordinates,
                 ),
               ),
             ),
 
-            // Floating Particles
+            // Floating particles
             ...List.generate(8, (index) {
               return _buildFloatingParticle(index: index, radius: radius);
             }),
@@ -142,7 +131,7 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
   }
 
   Widget _buildFloatingParticle({required int index, required double radius}) {
-    final angle = (index * 45) * (3.14159 / 180);
+    final angle = (index * 45) * (pi / 180);
     final distance = radius * 1.4;
     final x = distance * cos(angle);
     final y = distance * sin(angle);
@@ -161,11 +150,10 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
               height: 4,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    index % 2 == 0 ? AppColors.neonBlue : AppColors.neonPurple,
+                color: index.isEven ? AppColors.neonBlue : AppColors.neonPurple,
                 boxShadow: [
                   BoxShadow(
-                    color: (index % 2 == 0
+                    color: (index.isEven
                             ? AppColors.neonBlue
                             : AppColors.neonPurple)
                         .withOpacity(0.5),
@@ -183,24 +171,11 @@ class _AnimatedGlobeContainerState extends State<AnimatedGlobeContainer>
 
   double _calculateRadius(Size size) {
     if (size.width < AppConstants.mobileBreakpoint) {
-      return (size.width / 3.5).clamp(100, 180);
+      return (size.width / 3.5).clamp(100, 180).toDouble();
     } else if (size.width < AppConstants.tabletBreakpoint) {
       return 160.0;
     } else {
       return 200.0;
     }
-  }
-
-  double cos(double angle) => angle.cos();
-  double sin(double angle) => angle.sin();
-}
-
-extension on double {
-  double cos() {
-    return this;
-  }
-
-  double sin() {
-    return this;
   }
 }

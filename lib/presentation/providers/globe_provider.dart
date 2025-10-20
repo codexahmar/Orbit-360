@@ -13,7 +13,6 @@ class GlobeProvider extends ChangeNotifier {
   final GlobeRepository _repository = GlobeRepository();
   late FlutterEarthGlobeController _controller;
 
-  // State variables
   List<LocationModel> _locations = [];
   List<PointConnection> _connections = [];
   CelestialBodyModel? _selectedBody;
@@ -23,7 +22,6 @@ class GlobeProvider extends ChangeNotifier {
   bool _showConnections = true;
   bool _showLabels = true;
 
-  // Getters
   FlutterEarthGlobeController get controller => _controller;
   List<LocationModel> get locations => _locations;
   List<PointConnection> get connections => _connections;
@@ -36,6 +34,8 @@ class GlobeProvider extends ChangeNotifier {
   double get zoom => _controller.zoom;
   bool get showConnections => _showConnections;
   bool get showLabels => _showLabels;
+
+  // ---------------- Initialization ----------------
 
   void initialize() {
     if (_isInitialized) return;
@@ -53,38 +53,41 @@ class GlobeProvider extends ChangeNotifier {
     _connections = _repository.getDefaultConnections(_locations);
     _selectedBody = CelestialBodyModel.allBodies.first;
 
-    // ✅ Mark initialized immediately
     _isInitialized = true;
     notifyListeners();
 
-    // Load points after controller finishes loading
     _controller.onLoaded = () {
-      _addAllPoints();
-      _addAllConnections();
+      if (_selectedBody?.id == 'earth') {
+        _addAllPoints();
+        _addAllConnections();
+      }
     };
   }
 
+  // ---------------- Private Helpers ----------------
+
   void _addAllPoints() {
     for (var location in _locations) {
-      _controller.addPoint(location.toPoint());
-    }
-  }
-
-  void _addAllConnections() {
-    if (_showConnections) {
-      for (var connection in _connections) {
-        _controller.addPointConnection(connection);
+      if (location.isVisible) {
+        _controller.addPoint(location.toPoint());
       }
     }
   }
 
-  // Rotation controls
-  void toggleRotation() {
-    if (_controller.isRotating) {
-      _controller.stopRotation();
-    } else {
-      _controller.startRotation();
+  void _addAllConnections() {
+    if (_showConnections && _connections.isNotEmpty) {
+      for (var connection in _connections) {
+        _controller.addPointConnection(connection, animateDraw: true);
+      }
     }
+  }
+
+  // ---------------- Controls ----------------
+
+  void toggleRotation() {
+    _controller.isRotating
+        ? _controller.stopRotation()
+        : _controller.startRotation();
     notifyListeners();
   }
 
@@ -101,7 +104,6 @@ class GlobeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Zoom controls
   void setZoom(double zoom) {
     _controller.setZoom(zoom.clamp(
       AppConstants.minZoom,
@@ -111,83 +113,94 @@ class GlobeProvider extends ChangeNotifier {
   }
 
   void zoomIn() {
-    final newZoom = (_controller.zoom + 0.1).clamp(
-      AppConstants.minZoom,
-      AppConstants.maxZoom,
-    );
-    _controller.setZoom(newZoom);
-    notifyListeners();
+    setZoom(_controller.zoom + 0.1);
   }
 
   void zoomOut() {
-    final newZoom = (_controller.zoom - 0.1).clamp(
-      AppConstants.minZoom,
-      AppConstants.maxZoom,
-    );
-    _controller.setZoom(newZoom);
-    notifyListeners();
+    setZoom(_controller.zoom - 0.1);
   }
 
-  // Location management
+  // ---------------- Location Management ----------------
+
   void toggleLocation(LocationModel location) {
     final index = _locations.indexWhere((l) => l.id == location.id);
-    if (index != -1) {
-      final updatedLocation = _locations[index].copyWith(
-        isVisible: !_locations[index].isVisible,
-      );
-      _locations[index] = updatedLocation;
+    if (index == -1) return;
 
-      if (updatedLocation.isVisible) {
-        _controller.addPoint(updatedLocation.toPoint());
-      } else {
-        _controller.removePoint(updatedLocation.id);
-      }
-      notifyListeners();
+    final updated = _locations[index].copyWith(isVisible: !location.isVisible);
+    _locations[index] = updated;
+
+    if (_selectedBody?.id == 'earth') {
+      updated.isVisible
+          ? _controller.addPoint(updated.toPoint())
+          : _controller.removePoint(updated.id);
     }
+
+    notifyListeners();
   }
 
   void updateLocationSize(String id, double size) {
     final index = _locations.indexWhere((l) => l.id == id);
-    if (index != -1) {
-      final location = _locations[index];
-      final updatedLocation = location.copyWith(size: size);
-      _locations[index] = updatedLocation;
+    if (index == -1) return;
 
-      if (location.isVisible) {
-        _controller.updatePoint(
-          id,
-          style: PointStyle(color: location.color, size: size),
-        );
-      }
-      notifyListeners();
+    final location = _locations[index];
+    final updated = location.copyWith(size: size);
+    _locations[index] = updated;
+
+    if (location.isVisible) {
+      _controller.updatePoint(
+        id,
+        style: PointStyle(color: location.color, size: size),
+      );
     }
+    notifyListeners();
   }
 
   void focusOnLocation(LocationModel location) {
     _controller.focusOnCoordinates(location.coordinates, animate: true);
   }
 
-  // Connection management
+  // ---------------- Connections ----------------
+
   void toggleConnections() {
     _showConnections = !_showConnections;
-
     if (_showConnections) {
-      for (var connection in _connections) {
-        _controller.addPointConnection(connection, animateDraw: true);
-      }
+      _addAllConnections();
     } else {
-      for (var connection in _connections) {
-        _controller.removePointConnection(connection.id);
+      for (var conn in _connections) {
+        _controller.removePointConnection(conn.id);
       }
     }
     notifyListeners();
   }
 
-  // Celestial body selection
+  // ---------------- Celestial Body Selection ----------------
+
   void selectCelestialBody(CelestialBodyModel body) {
+    final wasEarth = _selectedBody?.id == 'earth';
+    final isEarth = body.id == 'earth';
     _selectedBody = body;
+
     _controller.loadSurface(Image.asset(body.texturePath).image);
 
+    // Handle points
+    if (wasEarth && !isEarth) {
+      for (var l in _locations.where((l) => l.isVisible)) {
+        _controller.removePoint(l.id);
+      }
+    } else if (!wasEarth && isEarth) {
+      _addAllPoints();
+    }
+
+    // Handle connections
+    if (wasEarth && !isEarth) {
+      for (var c in _connections) {
+        _controller.removePointConnection(c.id);
+      }
+    } else if (!wasEarth && isEarth) {
+      _addAllConnections();
+    }
+
+    // Glow effect
     if (body.hasGlow) {
       _controller.setSphereStyle(
         SphereStyle(
@@ -198,10 +211,12 @@ class GlobeProvider extends ChangeNotifier {
     } else {
       _controller.setSphereStyle(const SphereStyle());
     }
+
     notifyListeners();
   }
 
-  // Coordinate tracking
+  // ---------------- Interaction ----------------
+
   void setHoverCoordinates(GlobeCoordinates? coordinates) {
     _hoverCoordinates = coordinates;
     notifyListeners();
@@ -212,7 +227,6 @@ class GlobeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Labels
   void toggleLabels() {
     _showLabels = !_showLabels;
     notifyListeners();
@@ -220,7 +234,7 @@ class GlobeProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Controller disposal is handled by the widget
+    _controller.dispose();
     super.dispose();
   }
 }

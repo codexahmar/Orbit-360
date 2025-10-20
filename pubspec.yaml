@@ -1,7 +1,6 @@
 name: cosmic_globe
 description: A modern, interactive 3D globe visualization app with state management
-publish_to: 'none'
-version: 2.0.0+1
+
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

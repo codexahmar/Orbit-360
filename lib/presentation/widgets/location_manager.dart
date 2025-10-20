@@ -16,17 +16,19 @@ class LocationManager extends StatelessWidget {
           padding: const EdgeInsets.all(AppConstants.paddingMedium),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildHeader(),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: provider.locations.length,
-                  itemBuilder: (context, index) {
-                    final location = provider.locations[index];
-                    return _buildLocationCard(context, provider, location);
-                  },
-                ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: provider.locations.length,
+                itemBuilder: (context, index) {
+                  final location = provider.locations[index];
+                  return _CollapsibleLocationCard(
+                    location: location,
+                    provider: provider,
+                  );
+                },
               ),
             ],
           ),
@@ -34,38 +36,20 @@ class LocationManager extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: AppColors.nebulaGradient),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.location_on, color: Colors.white, size: 20),
-        ),
-        const SizedBox(width: 12),
-        const Text(
-          'Locations',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ],
-    );
-  }
+class _CollapsibleLocationCard extends StatelessWidget {
+  final LocationModel location;
+  final GlobeProvider provider;
 
-  Widget _buildLocationCard(
-    BuildContext context,
-    GlobeProvider provider,
-    LocationModel location,
-  ) {
-    return AnimatedContainer(
-      duration: AppConstants.normalAnimation,
+  const _CollapsibleLocationCard({
+    required this.location,
+    required this.provider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -102,8 +86,8 @@ class LocationManager extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // Name
+
+              // Name + Description
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +105,7 @@ class LocationManager extends StatelessWidget {
                     if (location.description != null)
                       Text(
                         location.description!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
                         ),
@@ -129,7 +113,7 @@ class LocationManager extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               // Checkbox
               Checkbox(
                 value: location.isVisible,
@@ -138,101 +122,95 @@ class LocationManager extends StatelessWidget {
               ),
             ],
           ),
-          
-          if (location.isVisible) ...[
-            const SizedBox(height: 12),
-             Divider(color: AppColors.glassBorder, height: 1),
-            const SizedBox(height: 12),
-            
-            // Coordinates
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCoordinateChip(
-                    icon: Icons.location_on,
-                    label: 'Lat',
-                    value: location.coordinates.latitude.toStringAsFixed(2),
-                  ),
+          const SizedBox(height: 12),
+          Divider(color: AppColors.glassBorder, height: 1),
+          const SizedBox(height: 12),
+
+          // Coordinates
+          Row(
+            children: [
+              Flexible(
+                child: _buildCoordinateChip(
+                  icon: Icons.location_on,
+                  label: 'Lat',
+                  value: location.coordinates.latitude.toStringAsFixed(2),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCoordinateChip(
-                    icon: Icons.explore,
-                    label: 'Lon',
-                    value: location.coordinates.longitude.toStringAsFixed(2),
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: _buildCoordinateChip(
+                  icon: Icons.explore,
+                  label: 'Lon',
+                  value: location.coordinates.longitude.toStringAsFixed(2),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Size Control
-            Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  size: 12,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Size Control
+          Row(
+            children: [
+              const Icon(Icons.circle,
+                  size: 10, color: AppColors.textSecondary),
+              const SizedBox(width: 4),
+              const Text(
+                'Size',
+                style: TextStyle(
+                  fontSize: 10,
                   color: AppColors.textSecondary,
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Size',
+              ),
+              Expanded(
+                child: Slider(
+                  value: location.size / 30,
+                  min: 0.2,
+                  max: 1.0,
+                  activeColor: location.color,
+                  inactiveColor: AppColors.tertiaryDark,
+                  onChanged: (value) {
+                    provider.updateLocationSize(location.id, value * 30);
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: location.color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  location.size.toStringAsFixed(0),
                   style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                Expanded(
-                  child: Slider(
-                    value: location.size / 30,
-                    min: 0.2,
-                    max: 1.0,
-                    activeColor: location.color,
-                    inactiveColor: AppColors.tertiaryDark,
-                    onChanged: (value) {
-                      provider.updateLocationSize(location.id, value * 30);
-                    },
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: location.color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    location.size.toStringAsFixed(0),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: location.color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            
-            // Focus Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => provider.focusOnLocation(location),
-                icon: const Icon(Icons.my_location, size: 18),
-                label: const Text('Focus on Location'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: location.color.withOpacity(0.2),
-                  foregroundColor: location.color,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: location.color.withOpacity(0.3)),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: location.color,
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Focus Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => provider.focusOnLocation(location),
+              icon: const Icon(Icons.my_location, size: 18),
+              label: const Text('Focus on Location'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: location.color.withOpacity(0.2),
+                foregroundColor: location.color,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: location.color.withOpacity(0.3)),
+                ),
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -244,7 +222,7 @@ class LocationManager extends StatelessWidget {
     required String value,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.tertiaryDark,
         borderRadius: BorderRadius.circular(8),
@@ -252,21 +230,30 @@ class LocationManager extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.neonBlue),
-          const SizedBox(width: 4),
-          Text(
-            '$label: ',
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: AppColors.neonBlue,
+          Icon(icon, size: 12, color: AppColors.neonBlue),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.neonBlue,
+                    ),
+                  ),
+                ],
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

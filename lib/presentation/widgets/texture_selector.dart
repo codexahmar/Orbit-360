@@ -15,12 +15,12 @@ class TextureSelector extends StatelessWidget {
         return Container(
           width: AppConstants.panelWidthDesktop,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
                 AppColors.primaryDark,
-                AppColors.secondaryDark.withOpacity(0.95),
+                AppColors.secondaryDark,
               ],
             ),
             border: Border(
@@ -36,19 +36,18 @@ class TextureSelector extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildHeader(),
               Expanded(
-                child: ListView.builder(
+                child: ListView.separated(
                   padding: const EdgeInsets.all(AppConstants.paddingMedium),
                   itemCount: CelestialBodyModel.allBodies.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final body = CelestialBodyModel.allBodies[index];
                     final isSelected = provider.selectedBody?.id == body.id;
-                    return _buildCelestialBodyCard(
-                      context,
-                      body,
-                      isSelected,
-                      () => provider.selectCelestialBody(body),
+                    return _CelestialBodyCard(
+                      body: body,
+                      isSelected: isSelected,
+                      onTap: () => provider.selectCelestialBody(body),
                     );
                   },
                 ),
@@ -59,77 +58,40 @@ class TextureSelector extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.paddingLarge),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.glassBorder, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: AppColors.auroraGradient),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.palette,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Celestial Bodies',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _CelestialBodyCard extends StatelessWidget {
+  final CelestialBodyModel body;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  Widget _buildCelestialBodyCard(
-    BuildContext context,
-    CelestialBodyModel body,
-    bool isSelected,
-    VoidCallback onTap,
-  ) {
+  const _CelestialBodyCard({
+    Key? key,
+    required this.body,
+    required this.isSelected,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: AppConstants.normalAnimation,
         curve: Curves.easeInOut,
-        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
+          gradient: LinearGradient(
+            colors: isSelected
+                ? [
                     AppColors.neonBlue.withOpacity(0.2),
                     AppColors.neonPurple.withOpacity(0.2),
-                  ],
-                )
-              : LinearGradient(
-                  colors: [
-                    AppColors.glassBackground,
-                    AppColors.glassBackground,
-                  ],
-                ),
+                  ]
+                : [AppColors.glassBackground, AppColors.glassBackground],
+          ),
           borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
           border: Border.all(
-            color: isSelected
-                ? AppColors.neonBlue
-                : AppColors.glassBorder,
+            color: isSelected ? AppColors.neonBlue : AppColors.glassBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -143,8 +105,9 @@ class TextureSelector extends StatelessWidget {
               : [],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail
+            // Thumbnail with optional glow
             Stack(
               children: [
                 ClipRRect(
@@ -158,7 +121,7 @@ class TextureSelector extends StatelessWidget {
                 ),
                 if (body.hasGlow)
                   Positioned.fill(
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         gradient: RadialGradient(
@@ -172,7 +135,7 @@ class TextureSelector extends StatelessWidget {
                   ),
                 if (isSelected)
                   Positioned.fill(
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
@@ -185,17 +148,20 @@ class TextureSelector extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 16),
-            
-            // Info
+
+            // Body Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title Row
                   Row(
                     children: [
                       Icon(
                         body.icon,
-                        color: isSelected ? AppColors.neonBlue : AppColors.textSecondary,
+                        color: isSelected
+                            ? AppColors.neonBlue
+                            : AppColors.textSecondary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -205,29 +171,25 @@ class TextureSelector extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isSelected ? AppColors.neonBlue : AppColors.textPrimary,
+                            color: isSelected
+                                ? AppColors.neonBlue
+                                : AppColors.textPrimary,
                           ),
                         ),
                       ),
                       if (isSelected)
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.neonBlue,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 16,
-                          ),
+                        const CircleAvatar(
+                          radius: 10,
+                          backgroundColor: AppColors.neonBlue,
+                          child:
+                              Icon(Icons.check, color: Colors.white, size: 14),
                         ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     body.description,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -238,11 +200,7 @@ class TextureSelector extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(
-                          Icons.wb_sunny,
-                          size: 14,
-                          color: body.glowColor,
-                        ),
+                        Icon(Icons.wb_sunny, size: 14, color: body.glowColor),
                         const SizedBox(width: 4),
                         Text(
                           'Has Glow Effect',

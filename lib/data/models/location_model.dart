@@ -57,77 +57,34 @@ class LocationModel {
     );
   }
 
-  // Predefined Locations
-  static LocationModel london = LocationModel(
-    id: 'london',
-    name: 'London',
-    description: 'Capital of the United Kingdom',
-    coordinates: const GlobeCoordinates(51.5072, -0.1276),
+  // --- 3 Locations at Distant Points ---
+  static LocationModel pakistan = LocationModel(
+    id: 'pakistan',
+    name: 'Pakistan',
+    coordinates: const GlobeCoordinates(30.3753, 69.3451), // South Asia
+    color: const Color(0xFF00BFA6),
+    size: 12.0,
+  );
+
+  static LocationModel brazil = LocationModel(
+    id: 'brazil',
+    name: 'Brazil',
+    coordinates: const GlobeCoordinates(-14.2350, -51.9253), // South America
     color: const Color(0xFFFF6B6B),
     size: 10.0,
   );
 
-  static LocationModel newYork = LocationModel(
-    id: 'new_york',
-    name: 'New York',
-    description: 'The Big Apple',
-    coordinates: const GlobeCoordinates(40.7128, -74.0060),
+  static LocationModel australia = LocationModel(
+    id: 'australia',
+    name: 'Australia',
+    coordinates: const GlobeCoordinates(-25.2744, 133.7751), // Oceania
     color: const Color(0xFF4ECDC4),
     size: 10.0,
   );
 
-  static LocationModel tokyo = LocationModel(
-    id: 'tokyo',
-    name: 'Tokyo',
-    description: 'Capital of Japan',
-    coordinates: const GlobeCoordinates(35.6895, 139.6917),
-    color: const Color(0xFF95E1D3),
-    size: 10.0,
-  );
-
-  static LocationModel paris = LocationModel(
-    id: 'paris',
-    name: 'Paris',
-    description: 'City of Light',
-    coordinates: const GlobeCoordinates(48.8566, 2.3522),
-    color: const Color(0xFFFFA07A),
-    size: 10.0,
-  );
-
-  static LocationModel sydney = LocationModel(
-    id: 'sydney',
-    name: 'Sydney',
-    description: 'Harbor City',
-    coordinates: const GlobeCoordinates(-33.8688, 151.2093),
-    color: const Color(0xFFFFD93D),
-    size: 10.0,
-  );
-
-  static LocationModel dubai = LocationModel(
-    id: 'dubai',
-    name: 'Dubai',
-    description: 'City of Gold',
-    coordinates: const GlobeCoordinates(25.2048, 55.2708),
-    color: const Color(0xFFBC8CF2),
-    size: 10.0,
-  );
-
-  static LocationModel center = LocationModel(
-    id: 'center',
-    name: 'Equator Prime',
-    description: 'The center point',
-    coordinates: const GlobeCoordinates(0, 0),
-    color: const Color(0xFFF38BA8),
-    size: 12.0,
-  );
-
   static List<LocationModel> get defaultLocations => [
-    london,
-    newYork,
-    tokyo,
-    paris,
-    sydney,
-    dubai,
-    center,
-  ];
+        pakistan,
+        brazil,
+        australia,
+      ];
 }

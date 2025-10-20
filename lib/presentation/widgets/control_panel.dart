@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../providers/globe_provider.dart';
+import 'location_manager.dart';
 
 class ControlPanel extends StatefulWidget {
   const ControlPanel({Key? key}) : super(key: key);
@@ -12,76 +13,92 @@ class ControlPanel extends StatefulWidget {
 }
 
 class _ControlPanelState extends State<ControlPanel> {
-  // Track which sections are expanded
-  final List<bool> _expanded = [true, false, false];
+  final List<bool> _expanded = List.generate(3, (i) => i == 0 || i == 2);
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<GlobeProvider>(
-      builder: (context, provider, _) {
-        return Container(
-          width: AppConstants.panelWidthDesktop,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.primaryDark,
-                AppColors.secondaryDark.withOpacity(0.95),
-              ],
-            ),
-            border: Border(
-              right: BorderSide(color: AppColors.glassBorder, width: 1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.neonBlue.withOpacity(0.1),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: ListView(
-            padding: const EdgeInsets.all(AppConstants.paddingLarge),
-            children: [
-              _buildSection(
-                index: 0,
-                icon: Icons.public,
-                title: "Globe Controls",
-                child: Column(
-                  children: [
-                    _buildRotationControl(provider),
-                    const SizedBox(height: 12),
-                    _buildRotationSpeedSlider(provider),
-                    const SizedBox(height: 12),
-                    _buildZoomControl(provider),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTablet = constraints.maxWidth < 900;
+        final isMobile = constraints.maxWidth < 600;
+        final panelWidth = isMobile
+            ? double.infinity
+            : isTablet
+                ? constraints.maxWidth * 0.4
+                : AppConstants.panelWidthDesktop;
+
+        return Consumer<GlobeProvider>(
+          builder: (context, provider, _) {
+            return Container(
+              width: panelWidth,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.primaryDark,
+                    AppColors.secondaryDark.withOpacity(0.95),
                   ],
                 ),
+                border: Border(
+                  right: BorderSide(color: AppColors.glassBorder, width: 1),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.neonBlue.withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildSection(
-                index: 1,
-                icon: Icons.flash_on,
-                title: "Quick Actions",
-                child: _buildQuickActions(provider),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(
+                    isMobile
+                        ? AppConstants.paddingSmall
+                        : AppConstants.paddingLarge,
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSection(
+                        index: 0,
+                        icon: Icons.public,
+                        title: "Globe Controls",
+                        child: Column(
+                          children: [
+                            _buildRotationControl(provider, isMobile),
+                            const SizedBox(height: 12),
+                            _buildRotationSpeedSlider(provider, isMobile),
+                            const SizedBox(height: 12),
+                            _buildZoomControl(provider, isMobile),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSection(
+                        index: 1,
+                        icon: Icons.analytics,
+                        title: "Statistics",
+                        child: _buildStatistics(provider, isMobile),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSection(
+                        index: 2,
+                        icon: Icons.location_on,
+                        title: "Locations",
+                        child: const LocationManager(),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildSection(
-                index: 2,
-                icon: Icons.analytics,
-                title: "Statistics",
-                child: _buildStatistics(provider),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  /// --------------------------
-  /// Collapsible Section Builder
-  /// --------------------------
   Widget _buildSection({
     required int index,
     required IconData icon,
@@ -96,9 +113,8 @@ class _ControlPanelState extends State<ControlPanel> {
       ),
       child: ExpansionTile(
         initiallyExpanded: _expanded[index],
-        onExpansionChanged: (expanded) {
-          setState(() => _expanded[index] = expanded);
-        },
+        onExpansionChanged: (expanded) =>
+            setState(() => _expanded[index] = expanded),
         tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         iconColor: AppColors.neonBlue,
         collapsedIconColor: AppColors.textSecondary,
@@ -113,12 +129,15 @@ class _ControlPanelState extends State<ControlPanel> {
               child: Icon(icon, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
           ],
@@ -130,11 +149,7 @@ class _ControlPanelState extends State<ControlPanel> {
     );
   }
 
-  /// --------------------------
-  /// Section Widgets (same as before)
-  /// --------------------------
-
-  Widget _buildRotationControl(GlobeProvider provider) {
+  Widget _buildRotationControl(GlobeProvider provider, bool isMobile) {
     return _buildGlassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,28 +157,33 @@ class _ControlPanelState extends State<ControlPanel> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    provider.isRotating
-                        ? Icons.play_circle_filled
-                        : Icons.pause_circle_filled,
-                    color: AppColors.neonBlue,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Auto Rotation',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+              Flexible(
+                child: Row(
+                  children: [
+                    Icon(
+                      provider.isRotating
+                          ? Icons.play_circle_filled
+                          : Icons.pause_circle_filled,
+                      color: AppColors.neonBlue,
+                      size: 24,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    const Flexible(
+                      child: Text(
+                        'Auto Rotation',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Transform.scale(
-                scale: 1.1,
+                scale: isMobile ? 0.9 : 1.1,
                 child: Switch(
                   value: provider.isRotating,
                   onChanged: (_) => provider.toggleRotation(),
@@ -172,18 +192,20 @@ class _ControlPanelState extends State<ControlPanel> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: provider.resetRotation,
+              onPressed: provider.isRotating ? provider.resetRotation : null,
               icon: const Icon(Icons.refresh, size: 20),
               label: const Text('Reset Position'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.glassBackground,
                 foregroundColor: AppColors.neonBlue,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 10 : 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: AppColors.neonBlue.withOpacity(0.3)),
@@ -196,39 +218,14 @@ class _ControlPanelState extends State<ControlPanel> {
     );
   }
 
-  Widget _buildRotationSpeedSlider(GlobeProvider provider) {
+  Widget _buildRotationSpeedSlider(GlobeProvider provider, bool isMobile) {
     return _buildGlassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Rotation Speed',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.neonBlue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  provider.rotationSpeed.toStringAsFixed(2),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.neonBlue,
-                  ),
-                ),
-              ),
-            ],
+          _labelWithValue(
+            label: 'Rotation Speed',
+            value: provider.rotationSpeed.toStringAsFixed(2),
           ),
           Slider(
             value: provider.rotationSpeed,
@@ -243,56 +240,13 @@ class _ControlPanelState extends State<ControlPanel> {
     );
   }
 
-  Widget _buildZoomControl(GlobeProvider provider) {
+  Widget _buildZoomControl(GlobeProvider provider, bool isMobile) {
     return _buildGlassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Zoom Level',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: provider.zoomOut,
-                    icon: const Icon(Icons.remove_circle_outline),
-                    color: AppColors.neonBlue,
-                    iconSize: 26,
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.neonBlue.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${(provider.zoom * 100).toInt()}%',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.neonBlue,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: provider.zoomIn,
-                    icon: const Icon(Icons.add_circle_outline),
-                    color: AppColors.neonBlue,
-                    iconSize: 26,
-                  ),
-                ],
-              ),
-            ],
-          ),
+          _labelWithValue(
+              label: 'Zoom Level', value: '${(provider.zoom * 100).toInt()}%'),
           Slider(
             value: provider.zoom,
             min: AppConstants.minZoom,
@@ -302,63 +256,29 @@ class _ControlPanelState extends State<ControlPanel> {
             inactiveColor: AppColors.tertiaryDark,
             onChanged: provider.setZoom,
           ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                onPressed: provider.zoomOut,
+                icon: const Icon(Icons.remove_circle_outline),
+                color: AppColors.neonBlue,
+                iconSize: 22,
+              ),
+              IconButton(
+                onPressed: provider.zoomIn,
+                icon: const Icon(Icons.add_circle_outline),
+                color: AppColors.neonBlue,
+                iconSize: 22,
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions(GlobeProvider provider) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _buildQuickActionButton(
-          icon: provider.showConnections ? Icons.link : Icons.link_off,
-          label: 'Connections',
-          onPressed: provider.toggleConnections,
-          isActive: provider.showConnections,
-        ),
-        _buildQuickActionButton(
-          icon: provider.showLabels ? Icons.label : Icons.label_off,
-          label: 'Labels',
-          onPressed: provider.toggleLabels,
-          isActive: provider.showLabels,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required bool isActive,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isActive
-            ? AppColors.neonBlue.withOpacity(0.2)
-            : AppColors.glassBackground,
-        foregroundColor:
-            isActive ? AppColors.neonBlue : AppColors.textSecondary,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isActive
-                ? AppColors.neonBlue.withOpacity(0.5)
-                : AppColors.glassBorder,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatistics(GlobeProvider provider) {
+  Widget _buildStatistics(GlobeProvider provider, bool isMobile) {
     return Column(
       children: [
         _buildStatCard(
@@ -410,11 +330,13 @@ class _ControlPanelState extends State<ControlPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     )),
                 Text(value,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -425,6 +347,40 @@ class _ControlPanelState extends State<ControlPanel> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _labelWithValue({required String label, required String value}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.neonBlue.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.neonBlue,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
